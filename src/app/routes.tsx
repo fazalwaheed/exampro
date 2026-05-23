@@ -12,6 +12,7 @@ import ManageMCQs from "./pages/admin/ManageMCQs";
 import ManageTests from "./pages/admin/ManageTests";
 import ManageStudents from "./pages/admin/ManageStudents";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
+import RouteGate from "./components/RouteGate";
 
 export const router = createBrowserRouter([
   {
@@ -36,7 +37,7 @@ export const router = createBrowserRouter([
   },
   {
     path: "/dashboard",
-    Component: StudentDashboard,
+    element: <RouteGate allow="student"><StudentDashboard /></RouteGate>,
   },
   {
     path: "/exam/:examId",
@@ -44,26 +45,26 @@ export const router = createBrowserRouter([
   },
   {
     path: "/results/:resultId",
-    Component: ResultsPage,
+    element: <RouteGate allow="student"><ResultsPage /></RouteGate>,
   },
   {
     path: "/admin",
-    Component: AdminDashboard,
+    element: <RouteGate allow="admin"><AdminDashboard /></RouteGate>,
   },
   {
     path: "/admin/mcqs",
-    Component: ManageMCQs,
+    element: <RouteGate allow="admin"><ManageMCQs /></RouteGate>,
   },
   {
     path: "/admin/tests",
-    Component: ManageTests,
+    element: <RouteGate allow="admin"><ManageTests /></RouteGate>,
   },
   {
     path: "/admin/students",
-    Component: ManageStudents,
+    element: <RouteGate allow="admin"><ManageStudents /></RouteGate>,
   },
   {
     path: "/admin/analytics",
-    Component: AdminAnalytics,
+    element: <RouteGate allow="admin"><AdminAnalytics /></RouteGate>,
   },
 ]);

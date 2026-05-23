@@ -1,17 +1,19 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
+import { AlertCircle, BookOpen, CheckCircle2, Loader2, Mail } from 'lucide-react';
+import { toast } from 'sonner';
+import { Alert, AlertDescription } from '../components/ui/alert';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Alert, AlertDescription } from '../components/ui/alert';
 import { InputOTP, InputOTPGroup, InputOTPSlot } from '../components/ui/input-otp';
-import { BookOpen, Loader2, AlertCircle, CheckCircle2, Mail } from 'lucide-react';
-import { toast } from 'sonner';
+import { resendOtp, verifyStudentOtp } from '../lib/platform';
 
 export default function OTPVerificationPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const email = location.state?.email || 'student@example.com';
-  
+  const purpose = location.state?.purpose === 'login' ? 'login' : 'register';
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
@@ -23,12 +25,12 @@ export default function OTPVerificationPage() {
     if (resendTimer > 0) {
       const timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
       return () => clearTimeout(timer);
-    } else {
-      setCanResend(true);
     }
+
+    setCanResend(true);
   }, [resendTimer]);
 
-  const handleVerify = async () => {
+  const handleVerify = () => {
     setError('');
     setSuccess(false);
     setLoading(true);
@@ -39,26 +41,35 @@ export default function OTPVerificationPage() {
       return;
     }
 
-    // Simulate API call
     setTimeout(() => {
+      const result = verifyStudentOtp(email, otp);
+      if (!result.ok) {
+        setError(result.message);
+        setLoading(false);
+        return;
+      }
+
       setSuccess(true);
-      toast.success('Email verified successfully!');
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
-    }, 1000);
+      toast.success(purpose === 'login' ? 'Login verified successfully!' : 'Email verified successfully!');
+      setTimeout(() => navigate('/dashboard'), 1500);
+    }, 800);
   };
 
   const handleResend = () => {
+    const result = resendOtp(email);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+
     setResendTimer(60);
     setCanResend(false);
-    toast.success('Verification code resent!');
+    toast.success(`Verification code resent. Demo OTP: ${result.otp}`);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-2">
             <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center">
@@ -77,7 +88,7 @@ export default function OTPVerificationPage() {
             </div>
             <CardTitle className="text-2xl">Verify your email</CardTitle>
             <CardDescription>
-              We've sent a 6-digit verification code to
+              Enter the 6-digit OTP sent to
               <br />
               <span className="font-medium text-gray-900">{email}</span>
             </CardDescription>
@@ -94,17 +105,16 @@ export default function OTPVerificationPage() {
               {success && (
                 <Alert className="bg-green-50 text-green-900 border-green-200">
                   <CheckCircle2 className="h-4 w-4" />
-                  <AlertDescription>Email verified! Redirecting to dashboard...</AlertDescription>
+                  <AlertDescription>Verification complete. Redirecting to student dashboard...</AlertDescription>
                 </Alert>
               )}
 
+              <div className="rounded-lg bg-slate-50 p-3 text-center text-sm text-slate-600">
+                Demo OTP for this frontend build: <span className="font-semibold text-slate-900">123456</span>
+              </div>
+
               <div className="flex justify-center">
-                <InputOTP 
-                  maxLength={6} 
-                  value={otp}
-                  onChange={(value) => setOtp(value)}
-                  disabled={loading || success}
-                >
+                <InputOTP maxLength={6} value={otp} onChange={setOtp} disabled={loading || success}>
                   <InputOTPGroup>
                     <InputOTPSlot index={0} />
                     <InputOTPSlot index={1} />
@@ -116,11 +126,7 @@ export default function OTPVerificationPage() {
                 </InputOTP>
               </div>
 
-              <Button 
-                onClick={handleVerify} 
-                className="w-full" 
-                disabled={loading || success || otp.length !== 6}
-              >
+              <Button onClick={handleVerify} className="w-full" disabled={loading || success || otp.length !== 6}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -137,28 +143,24 @@ export default function OTPVerificationPage() {
               </Button>
 
               <div className="text-center text-sm space-y-2">
-                <p className="text-gray-600">Didn't receive the code?</p>
+                <p className="text-gray-600">Did not receive the code?</p>
                 {canResend ? (
-                  <button
-                    onClick={handleResend}
-                    className="text-blue-600 hover:underline font-medium"
-                  >
+                  <button onClick={handleResend} className="text-blue-600 hover:underline font-medium">
                     Resend code
                   </button>
                 ) : (
                   <p className="text-gray-500">
-                    Resend available in{' '}
-                    <span className="font-medium text-gray-900">{resendTimer}s</span>
+                    Resend available in <span className="font-medium text-gray-900">{resendTimer}s</span>
                   </p>
                 )}
               </div>
 
               <div className="pt-4 border-t text-center text-sm">
                 <button
-                  onClick={() => navigate('/register')}
+                  onClick={() => navigate(purpose === 'login' ? '/login' : '/register')}
                   className="text-gray-600 hover:text-gray-900"
                 >
-                  Change email address →
+                  Change email address
                 </button>
               </div>
             </div>
@@ -166,11 +168,8 @@ export default function OTPVerificationPage() {
         </Card>
 
         <div className="mt-6 text-center">
-          <button
-            onClick={() => navigate('/')}
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            ← Back to home
+          <button onClick={() => navigate('/')} className="text-sm text-gray-600 hover:text-gray-900">
+            Back to home
           </button>
         </div>
       </div>

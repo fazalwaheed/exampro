@@ -1,69 +1,63 @@
 import { useNavigate } from 'react-router';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { Activity, BarChart3, BookOpen, ClipboardList, Eye, LogOut, Monitor, Plus, Settings, TrendingUp, Users } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../components/ui/avatar';
-import { 
-  BookOpen, 
-  Users, 
-  TrendingUp, 
-  Activity, 
-  Settings, 
-  LogOut, 
-  FileText,
-  ClipboardList,
-  UserCheck,
-  BarChart3,
-  Plus,
-  Eye,
-  Monitor
-} from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
+import { Badge } from '../components/ui/badge';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { getPlatformState, logout } from '../lib/platform';
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const state = getPlatformState();
+  const session = state.currentSession;
+  const totalStudents = state.students.length;
+  const activeStudents = state.students.filter((student) => student.status === 'Active').length;
 
   const stats = [
-    { title: 'Total Students', value: '12,450', change: '+12.5%', icon: Users, color: 'bg-blue-500' },
-    { title: 'Total MCQs', value: '10,847', change: '+234', icon: BookOpen, color: 'bg-green-500' },
-    { title: 'Mock Tests', value: '156', change: '+12', icon: ClipboardList, color: 'bg-purple-500' },
-    { title: 'Active Sessions', value: '3,248', change: '+8.2%', icon: Activity, color: 'bg-orange-500' }
+    { title: 'Total Students', value: `${totalStudents}`, change: `${activeStudents} active`, icon: Users, color: 'bg-blue-500' },
+    { title: 'Total MCQs', value: `${state.mcqs.length}`, change: 'Managed by admin', icon: BookOpen, color: 'bg-green-500' },
+    { title: 'Mock Tests', value: '156', change: '+12 planned', icon: ClipboardList, color: 'bg-purple-500' },
+    { title: 'Active Sessions', value: `${activeStudents}`, change: 'Current verified students', icon: Activity, color: 'bg-orange-500' },
   ];
 
-  const recentActivity = [
-    { user: 'Ahmed Khan', action: 'Completed Mock Test #45', time: '5 min ago', avatar: 'AK' },
-    { user: 'Fatima Ali', action: 'Started Daily Quiz - Biology', time: '12 min ago', avatar: 'FA' },
-    { user: 'Hassan Raza', action: 'Achieved 7-day streak', time: '25 min ago', avatar: 'HR' },
-    { user: 'Ayesha Khan', action: 'Completed Chemistry Test', time: '1 hour ago', avatar: 'AYK' }
-  ];
+  const recentActivity = state.students.slice(0, 4).map((student) => ({
+    user: student.name,
+    action: `Student account linked to ${student.email}`,
+    time: student.lastActive,
+    avatar: student.name.split(' ').map((item) => item[0]).join(''),
+  }));
 
   const monthlyData = [
-    { month: 'Jan', students: 8500, tests: 12000 },
-    { month: 'Feb', students: 9200, tests: 15000 },
-    { month: 'Mar', students: 10100, tests: 18000 },
-    { month: 'Apr', students: 11200, tests: 21000 },
-    { month: 'May', students: 12450, tests: 25000 }
+    { month: 'Jan', students: 8, tests: 12 },
+    { month: 'Feb', students: 10, tests: 15 },
+    { month: 'Mar', students: 12, tests: 18 },
+    { month: 'Apr', students: 15, tests: 21 },
+    { month: 'May', students: totalStudents, tests: 25 },
   ];
 
-  const subjectDistribution = [
-    { subject: 'Biology', count: 3845 },
-    { subject: 'Chemistry', count: 2678 },
-    { subject: 'Physics', count: 2156 },
-    { subject: 'English', count: 1234 },
-    { subject: 'Logical', count: 934 }
-  ];
+  const subjectDistribution = ['Biology', 'Chemistry', 'Physics', 'English', 'Logical Reasoning'].map((subject) => ({
+    subject,
+    count: state.mcqs.filter((mcq) => mcq.subject === subject).length,
+  }));
 
-  const topPerformers = [
-    { rank: 1, name: 'Fatima Ali', score: 8750, tests: 45 },
-    { rank: 2, name: 'Hassan Raza', score: 8420, tests: 42 },
-    { rank: 3, name: 'Ayesha Khan', score: 8190, tests: 38 },
-    { rank: 4, name: 'Ali Ahmed', score: 7860, tests: 40 },
-    { rank: 5, name: 'Sara Malik', score: 7540, tests: 35 }
-  ];
+  const topPerformers = [...state.students]
+    .sort((a, b) => b.avgScore - a.avgScore)
+    .slice(0, 5)
+    .map((student, index) => ({
+      rank: index + 1,
+      name: student.name,
+      score: student.avgScore,
+      tests: student.testsCompleted,
+    }));
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -73,15 +67,19 @@ export default function AdminDashboard() {
               </div>
               <div>
                 <h1 className="font-bold text-xl">MDCAT Prep Admin</h1>
-                <p className="text-xs text-gray-500">Dashboard</p>
+                <p className="text-xs text-gray-500">Controls student access and website content</p>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              <div className="hidden sm:block text-right">
+                <p className="text-sm font-medium">{session?.name}</p>
+                <p className="text-xs text-gray-500">{session?.email}</p>
+              </div>
               <Button variant="ghost" size="icon">
                 <Settings className="w-5 h-5" />
               </Button>
-              <Button variant="ghost" onClick={() => navigate('/')}>
+              <Button variant="ghost" onClick={handleLogout}>
                 <LogOut className="w-4 h-4 mr-2" />
                 Logout
               </Button>
@@ -91,12 +89,11 @@ export default function AdminDashboard() {
       </header>
 
       <div className="container mx-auto px-4 py-6">
-        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {stats.map((stat, index) => {
+          {stats.map((stat) => {
             const Icon = stat.icon;
             return (
-              <Card key={index} className="hover:shadow-lg transition-shadow">
+              <Card key={stat.title} className="hover:shadow-lg transition-shadow">
                 <CardContent className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
@@ -117,7 +114,6 @@ export default function AdminDashboard() {
           })}
         </div>
 
-        {/* Quick Actions */}
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
@@ -126,7 +122,7 @@ export default function AdminDashboard() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Button onClick={() => navigate('/admin/mcqs')} className="h-auto py-4 flex-col gap-2">
                 <Plus className="w-5 h-5" />
-                Add MCQ
+                Update MCQs
               </Button>
               <Button onClick={() => navigate('/admin/tests')} variant="outline" className="h-auto py-4 flex-col gap-2">
                 <ClipboardList className="w-5 h-5" />
@@ -145,13 +141,11 @@ export default function AdminDashboard() {
         </Card>
 
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Growth Chart */}
             <Card>
               <CardHeader>
                 <CardTitle>Platform Growth</CardTitle>
-                <CardDescription>Monthly student registrations and test attempts</CardDescription>
+                <CardDescription>Student registrations and test attempts overview</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
@@ -168,18 +162,17 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Subject Distribution */}
             <Card>
               <CardHeader>
                 <CardTitle>MCQ Distribution by Subject</CardTitle>
-                <CardDescription>Total questions available per subject</CardDescription>
+                <CardDescription>Current question bank controlled from the admin panel</CardDescription>
               </CardHeader>
               <CardContent>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={subjectDistribution}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="subject" />
-                    <YAxis />
+                    <YAxis allowDecimals={false} />
                     <Tooltip />
                     <Bar dataKey="count" fill="#3b82f6" radius={[8, 8, 0, 0]} />
                   </BarChart>
@@ -187,20 +180,17 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
             <Card>
               <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest student actions on the platform</CardDescription>
+                <CardTitle>Recent Student Activity</CardTitle>
+                <CardDescription>Latest account and learning activity</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivity.map((activity, index) => (
-                    <div key={index} className="flex items-center gap-4 p-3 rounded-lg bg-gray-50">
+                  {recentActivity.map((activity) => (
+                    <div key={activity.user} className="flex items-center gap-4 p-3 rounded-lg bg-gray-50">
                       <Avatar>
-                        <AvatarFallback className="bg-blue-600 text-white">
-                          {activity.avatar}
-                        </AvatarFallback>
+                        <AvatarFallback className="bg-blue-600 text-white">{activity.avatar}</AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <p className="font-medium">{activity.user}</p>
@@ -210,37 +200,30 @@ export default function AdminDashboard() {
                     </div>
                   ))}
                 </div>
-                <Button variant="outline" className="w-full mt-4">
+                <Button variant="outline" className="w-full mt-4" onClick={() => navigate('/admin/students')}>
                   <Eye className="w-4 h-4 mr-2" />
-                  View All Activity
+                  View All Students
                 </Button>
               </CardContent>
             </Card>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Top Performers */}
             <Card>
               <CardHeader>
                 <CardTitle>Top Performers</CardTitle>
-                <CardDescription>Students with highest scores</CardDescription>
+                <CardDescription>Students with the highest average scores</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
                   {topPerformers.map((student) => (
                     <div key={student.rank} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                        student.rank === 1 ? 'bg-yellow-100 text-yellow-700' :
-                        student.rank === 2 ? 'bg-gray-200 text-gray-700' :
-                        student.rank === 3 ? 'bg-orange-200 text-orange-700' :
-                        'bg-gray-100 text-gray-600'
-                      }`}>
+                      <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold bg-gray-100 text-gray-700">
                         #{student.rank}
                       </div>
                       <div className="flex-1">
                         <div className="font-medium">{student.name}</div>
-                        <div className="text-xs text-gray-600">{student.score} pts • {student.tests} tests</div>
+                        <div className="text-xs text-gray-600">{student.score}% avg score - {student.tests} tests</div>
                       </div>
                     </div>
                   ))}
@@ -248,62 +231,32 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Active Sessions */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Monitor className="w-5 h-5 text-green-500" />
                   Active Sessions
                 </CardTitle>
-                <CardDescription>Students currently taking tests</CardDescription>
+                <CardDescription>Verified students currently allowed in the system</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-6">
-                  <div className="text-5xl font-bold text-green-600 mb-2">3,248</div>
-                  <p className="text-sm text-gray-600 mb-4">Students online right now</p>
+                  <div className="text-5xl font-bold text-green-600 mb-2">{activeStudents}</div>
+                  <p className="text-sm text-gray-600 mb-4">Students marked active</p>
                   <div className="space-y-2 text-xs text-left">
                     <div className="flex justify-between p-2 bg-green-50 rounded">
-                      <span>Taking Mock Tests</span>
-                      <span className="font-semibold">1,456</span>
+                      <span>Verified Accounts</span>
+                      <span className="font-semibold">{state.students.filter((student) => student.verified).length}</span>
                     </div>
                     <div className="flex justify-between p-2 bg-blue-50 rounded">
-                      <span>Daily Quizzes</span>
-                      <span className="font-semibold">1,124</span>
+                      <span>Total Registrations</span>
+                      <span className="font-semibold">{totalStudents}</span>
                     </div>
                     <div className="flex justify-between p-2 bg-purple-50 rounded">
-                      <span>Practice Mode</span>
-                      <span className="font-semibold">668</span>
+                      <span>Question Bank</span>
+                      <span className="font-semibold">{state.mcqs.length}</span>
                     </div>
                   </div>
-                </div>
-                <Button variant="outline" className="w-full">
-                  <Monitor className="w-4 h-4 mr-2" />
-                  Monitor Sessions
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* System Status */}
-            <Card>
-              <CardHeader>
-                <CardTitle>System Status</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Server Status</span>
-                  <Badge className="bg-green-600">Operational</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Database</span>
-                  <Badge className="bg-green-600">Healthy</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">API Response</span>
-                  <Badge variant="secondary">45ms</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Last Backup</span>
-                  <Badge variant="outline">2 hours ago</Badge>
                 </div>
               </CardContent>
             </Card>
